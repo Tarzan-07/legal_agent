@@ -96,3 +96,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             status_code=500,
             detail=f"Upload to supabase failed: {str(e)}"
         )
+    
+@app.get("/invoices")
+async def list_all_invoices():
+    pass
