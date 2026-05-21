@@ -3,7 +3,6 @@ FastAPI server implementation.
 
 Endpoints -
     POST - /upload - receive one or more invoice files
-    GET - /invoices - list all stored invoices
     GET - /health - liveness check
 """
 
@@ -11,6 +10,9 @@ import logging
 import shutil
 import tempfile
 import os
+import logging
+import pika
+import json
 
 from pathlib import Path
 
@@ -21,6 +23,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from supabase import Client, create_client
+
+from doc_tools import process_and_graph_doc
+
+logging.basicConfig(logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Invoice Agent API", version="1.0.0")
 
@@ -34,6 +41,8 @@ app.add_middleware(
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 BUCKET_NAME = os.getenv('BUCKET_NAME')
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
+QUEUE_NAME = "document_processing_queue"
 
 supabase: Client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -47,6 +56,25 @@ async def serve_index():
 async def health_check():
     return {'status': 'ok'}
 
+
+def publish_to_queue(payload: dict):
+    """Establishes a safe connection with rabbit mq and safely pushes a persistent task message."""
+
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
+
+    # To ensure a queue survives system crashes or daemon restarts.
+    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+
+    channel.basic_publish(
+        exchange='',
+        routing_key=QUEUE_NAME,
+        body=json.dumps(payload),
+        properties=pika.BasicProperties(
+            delivery_mode=pika.DeliveryMode.Persistent
+        )
+    )
+    connection.close()
 # Upload functionality
 
 @app.post("/upload")
@@ -83,20 +111,31 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
 
             public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
 
-            results.append({
-                "status": "success",
+            task_payload = {
+                "file_path": file_path,
                 "path": file_path,
+                "public_url": public_url
+            }
+            
+            publish_to_queue(task_payload)
+            logger.info(f"Queued message task for file: {file.filename}")
+
+            results.append({
+                "status": "queued",
+                "filename": file.filename,
                 "public_url": public_url
             })
 
-        return {'results': results}
+        return {"results": results}
+
+        # logger.info(f"Successfully stored the file in supabase !")
+        # return {'results': results}
+
+
 
     except Exception as e:
+        logger.error(f"Upload and processing scheduling failed: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Upload to supabase failed: {str(e)}"
+            detail=f"Pipeline scheduling failed: {str(e)}"
         )
-    
-@app.get("/invoices")
-async def list_all_invoices():
-    pass
