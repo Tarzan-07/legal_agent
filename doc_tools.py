@@ -7,8 +7,11 @@ import magic
 import fitz
 import spacy
 import logging
+import litellm
 
+from typing import List
 from neo4j import GraphDatabase
+from pydantic import BaseModel, Field
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -17,6 +20,7 @@ from langchain_community.vectorstores import Chroma
 spacy.require_gpu()
 nlp = spacy.load("en_core_web_trf")
 
+NER_MODEL = os.getenv("NER_MODEL")
 EMBED_MODEL_NAME = os.getenv('EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
 embed_model = HuggingFaceEmbeddings(
     model_name=EMBED_MODEL_NAME,
@@ -25,6 +29,13 @@ embed_model = HuggingFaceEmbeddings(
 )
 
 PERSIST_DIR = "./vector_db"
+
+class EntitySchema(BaseModel):
+    text: str = Field(description="The exact text of the named entity extracted from the documents.")
+    label: str = Field(description="The category of the entity (e.g, PERSON, ORG, GPE, DATE, MONEY, LAW).")
+
+class ExtractedEntities(BaseModel):
+    entites = List[EntitySchema]
 
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_URI')
@@ -95,19 +106,72 @@ def process_and_graph_doc(file_path: str):
     vectorize_and_store(text, file_name)
 
     logger.info(f"Extracting structural entity layers from {file_name}...")
-    doc = nlp(text)
+    # doc = nlp(text)
+
+    # seen_entites = set()
+    # entites_payload = []
+
+    # for ent in doc.ents:
+    #     cleaned_text = ent.text.strip()
+    #     entity_key = (cleaned_text, ent.label_)
+    #     if entity_key not in seen_entites and ent.text.strip():
+    #         seen_entites.add(entity_key)
+    #         entites_payload.append({
+    #             "text": ent.text.strip(),
+    #             "label": ent.label_
+    #         })
+
+    
+    # message = [{
+    #     'role': 'user',
+    #     'content': [
+    #         {
+    #             'type': 'text',
+    #             'text': (
+    #                 'Your job is to extract all named entity recognitions from a given text '
+    #                 'Do not make any modifications, just simply extract named entity recognitions. '
+    #             ),
+    #         },
+    #     ]
+    # }]
+
+    system_instruction = (
+        "Your job is to extract all named entities from the given text. "
+        "Do not make modifications or summarize the value, just cleanly extract them. "
+        "Categorize them into standard classifications such as PERSON, ORG, GPE, DATE, MONEY, or LAW."
+    )
+
+    response = litellm.completion(
+        model=NER_MODEL,
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        api_base='https://openrouter.ai/api/v1',
+        temperature=0,
+        max_tokens=1000,
+        response_format=ExtractedEntities,
+        messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": f"Document text to analyze:\n\n{text}"}
+            ]
+    )
+
+    content = response.choices[0].message.content
+
+    if isinstance(content, str):
+        structered_data = ExtractedEntities.model_validate(content)
+    else:
+        structured_data = content
 
     seen_entites = set()
     entites_payload = []
 
-    for ent in doc.ents:
+    for ent in structered_data.entites:
         cleaned_text = ent.text.strip()
-        entity_key = (cleaned_text, ent.label_)
+        entity_key = (cleaned_text.lower(), ent.label.upper())
         if entity_key not in seen_entites and ent.text.strip():
             seen_entites.add(entity_key)
             entites_payload.append({
-                "text": ent.text.strip(),
-                "label": ent.label_
+                "text": cleaned_text,
+                "label": ent.label.upper()
             })
 
     with neo4j_driver.session() as session:
