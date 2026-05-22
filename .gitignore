@@ -2,3 +2,7 @@
 *.env
 *.factory
 openspec/
+ingest_football_data.py
+NEO4j-ad*
+sys_design.excalidraw.png
+__pycache__/
