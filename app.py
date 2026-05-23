@@ -13,6 +13,7 @@ import os
 import logging
 import pika
 import json
+import uuid
 
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from pydantic import BaseModel
 
 from supabase import Client, create_client
 
-from doc_tools import process_and_graph_doc
+# from doc_tools import process_document
 
 logging.basicConfig(logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,8 +64,13 @@ def publish_to_queue(payload: dict):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
     channel = connection.channel()
 
+    queue_arguments = {
+        'x-queue-type': 'quorum',
+        'x-delivery-limit': 5
+    }
+
     # To ensure a queue survives system crashes or daemon restarts.
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    channel.queue_declare(queue=QUEUE_NAME, durable=True, arguments=queue_arguments)
 
     channel.basic_publish(
         exchange='',
@@ -85,14 +91,16 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
         ALLOWED_TEXT_EXT = {".pdf", ".doc", ".docx"}
         ALLOWED_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".tiff"}
 
+        unique_id = str(uuid.uuid4())
+
         for file in files:
             file_ext = Path(file.filename).suffix.lower()
             
             if file_ext in ALLOWED_TEXT_EXT: 
-                file_path = f"text/{file.filename}"
+                file_path = f"text/{unique_id}_{file.filename}"
                 
             elif file_ext in ALLOWED_IMG_EXT:
-                file_path = f"image/{file.filename}"
+                file_path = f"image/{unique_id}_{file.filename}"
             
             else:
                 results.append({
@@ -113,7 +121,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
 
             task_payload = {
                 "file_path": file_path,
-                "path": file_path,
+                "original_filename": file.filename,
                 "public_url": public_url
             }
             
