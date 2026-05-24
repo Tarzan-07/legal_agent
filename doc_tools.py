@@ -61,7 +61,6 @@ NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 def extract_text_from_digital_docs(file_path: str):
