@@ -45,12 +45,18 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+
+
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 # logger.info("SUPABASE_URL, ", SUPABASE_URL)
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 QUEUE_NAME = "document_processing_queue"
+
+logger.info(f"SUPABASE_URL = {repr(SUPABASE_URL)}")
+logger.info(f"BUCKET_NAME = {repr(BUCKET_NAME)}")
+logger.info(f"SUPABASE_KEY exists = {SUPABASE_KEY is not None}")
 
 supabase: Client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
 FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -99,9 +105,9 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
         ALLOWED_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".tiff"}
 
         for file in files:
-            file_content = await file.read(2048)
+            file_read = await file.read(2048)
             await file.seek(0)
-            mime_type = magic.from_buffer(file_content, mime=True)
+            mime_type = magic.from_buffer(file_read, mime=True)
             file_ext = mimetypes.guess_extension(mime_type)
 
             if file_ext == '.jpe':
@@ -109,9 +115,10 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
 
             unique_id = str(uuid.uuid4())
             
-            if file_ext in ALLOWED_TEXT_EXT: 
+            file_content = await file.read()
+            if file_ext in ALLOWED_TEXT_EXT:
                 file_path = f"text/{unique_id}_{file.filename}"
-                
+            
             elif file_ext in ALLOWED_IMG_EXT:
                 file_path = f"image/{unique_id}_{file.filename}"
             
@@ -129,12 +136,13 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
                 file_options={"content-type": file.content_type}
             )
 
-            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
+            # public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
 
             task_payload = {
                 "file_path": file_path,
+                "file_ext": file_ext,
                 "original_filename": file.filename,
-                "public_url": public_url
+                # "public_url": public_url
             }
             
             publish_to_queue(task_payload)
@@ -143,7 +151,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             results.append({
                 "status": "queued",
                 "filename": file.filename,
-                "public_url": public_url
+                # "public_url": public_url
             })
         
         return {"results": results}

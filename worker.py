@@ -23,12 +23,17 @@ QUEUE_NAME = 'document_processing_queue'
 
 supabase: Client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
 
+ALLOWED_TEXT_EXT = {".pdf", ".doc", ".docx"}
+ALLOWED_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".tiff"}
+
+
 def callback(ch, method, properties, body):
     """Fires automatically whenever a fresh message object arrives on the broker bus."""
     temp_local_path = None
     task_data = json.loads(body.decode('utf-8'))
 
     file_path = task_data['file_path']
+    file_ext = task_data['file_ext']
     original_filename = task_data['original_filename']
 
     logger.info(f"Received task to process: {original_filename}")
@@ -42,8 +47,10 @@ def callback(ch, method, properties, body):
             temp_local_path = temp_file.name
 
         logger.info(f"Processing structural extraction via AI layers for: {original_filename}")
-        process_document(temp_local_path)
-
+        if file_ext in ALLOWED_TEXT_EXT:
+            process_document(temp_local_path)
+        elif file_ext in ALLOWED_IMG_EXT:
+            logger.error(f"Image extensions still nor supported.")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         logger.info(f"Task completed successfully and acknowledged: {original_filename}")
     

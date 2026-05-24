@@ -25,21 +25,26 @@ import litellm
 from typing import List, Optional
 from neo4j import GraphDatabase
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 
 # spacy.require_gpu()
 # nlp = spacy.load("en_core_web_trf")
 
+load_dotenv()
+
 NER_MODEL = os.getenv("NER_MODEL")
-EMBED_MODEL_NAME = os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
-embed_model = HuggingFaceEmbeddings(
-    model_name=EMBED_MODEL_NAME,
-    model_kwargs={'device': 'cuda'},  # Forces embedding generation onto your GPU
-    encode_kwargs={'normalize_embeddings': True}
+EMBED_MODEL_NAME = os.getenv('EMBEDDING_MODEL')
+embed_model = OpenAIEmbeddings(
+    model=f"openrouter/{EMBED_MODEL_NAME}",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
 )
+# embed_litellm = litellm
 
 PERSIST_DIR = "./vector_db"
 
@@ -57,8 +62,8 @@ class Relationship(BaseModel):
     relation: str = Field(description="Relationship type")
 
 class ExtractionResult(BaseModel):
-    entities = List[Entity]
-    relationships = List[Relationship]
+    entities: List[Entity]
+    relationships: List[Relationship]
 
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_USER')

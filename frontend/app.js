@@ -38,7 +38,7 @@ function stageFiles (fileArray) {
             alert(`"${file.name}" is not supported file type.`);
             return;
         }
-
+        
         if (stagedFiles.has(file.name)) return;
         stagedFiles.set(file.name, file);
         renderFileItem(file);
@@ -104,6 +104,7 @@ uploadBtn.addEventListener('click', async () => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         
         const data = await res.json();
+        console.log(data)
         renderResults(data.results);
         await new Promise(r => setTimeout(r, 1500));
         await loadInvoices();
