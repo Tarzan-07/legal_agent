@@ -10,6 +10,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_core.messages import HumanMessage
 from langchain_openai import OpenAIEmbeddings
+from ent_types import (
+    Entity,
+    Relationship,
+    ExtractionResult
+)
 
 embed_model = os.getenv("EMBED_MODEL")
 vis_model = os.getenv("VIS_MODEL")

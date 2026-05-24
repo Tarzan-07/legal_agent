@@ -32,6 +32,12 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 
+from ent_types import (
+    Entity,
+    Relationship,
+    ExtractionResult
+)
+
 # spacy.require_gpu()
 # nlp = spacy.load("en_core_web_trf")
 
@@ -47,23 +53,6 @@ embed_model = OpenAIEmbeddings(
 # embed_litellm = litellm
 
 PERSIST_DIR = "./vector_db"
-
-class Entity(BaseModel):
-    id: str = Field(description="Unique entity identifier.")
-    text: str = Field(description="The exact text of the named entity extracted from the documents.")
-    type: str = Field(description="Entity type")
-    normalized_value: Optional[str] = None
-    confidence: Optional[float] = None
-    # label: str = Field(description="The category of the entity (e.g, PERSON, ORG, GPE, DATE, MONEY, LAW).")
-
-class Relationship(BaseModel):
-    source: str = Field(description="Source entity ID")
-    target: str = Field(description="Target entity ID")
-    relation: str = Field(description="Relationship type")
-
-class ExtractionResult(BaseModel):
-    entities: List[Entity]
-    relationships: List[Relationship]
 
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_USER')
