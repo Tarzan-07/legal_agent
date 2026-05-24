@@ -407,28 +407,21 @@ def process_document(file_path: str):
     all_entities = []
 
     with neo4j_driver.session() as session:
-
         for chunk in chunks:
-
             try:
-
                 extraction = extract_entities_and_relationships(
                     chunk
                 )
-
                 extraction.entities = deduplicate_entities(
                     extraction.entities
                 )
-
                 all_entities.extend(extraction.entities)
-
                 session.execute_write(
                     store_graph_data,
                     file_name,
                     chunk,
                     extraction
                 )
-
             except Exception as e:
                 logger.exception(
                     f"Chunk processing failed: {chunk['chunk_id']} | {e}"
@@ -443,8 +436,8 @@ def process_document(file_path: str):
 # ENTRYPOINT
 # =========================================================
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    sample_file = "./sample_contract.pdf"
+#     sample_file = "./sample_contract.pdf"
 
-    process_document(sample_file)
+#     process_document(sample_file)
