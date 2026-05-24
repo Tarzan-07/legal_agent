@@ -12,7 +12,7 @@ from supabase import Client, create_client
 
 from doc_tools import process_document
 
-logging.basicConfig(logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')

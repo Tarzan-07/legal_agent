@@ -18,6 +18,7 @@ import magic
 import mimetypes
 
 from pathlib import Path
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,8 +30,11 @@ from supabase import Client, create_client
 
 # from doc_tools import process_document
 
-logging.basicConfig(logging.INFO)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+logger.info("Loading env variables...")
+load_dotenv()
 
 app = FastAPI(title="Invoice Agent API", version="1.0.0")
 
@@ -42,6 +46,7 @@ app.add_middleware(
 )
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
+# logger.info("SUPABASE_URL, ", SUPABASE_URL)
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
@@ -134,7 +139,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             
             publish_to_queue(task_payload)
             logger.info(f"Queued message task for file: {file.filename}")
-            
+
             results.append({
                 "status": "queued",
                 "filename": file.filename,

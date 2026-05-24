@@ -1,0 +1,463 @@
+/* ── Reset & tokens ───────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --border: #e2e5ee;
+    --accent: #4f6ef7;
+    --accent-h: #3a56d4;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --text: #1a1d2e;
+    --muted: #6b7280;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0, 0, 0, .08);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+/* ── App shell ─────────────────────────────────────────── */
+.app {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+header {
+    display: flex;
+    align-items: center;
+    padding: 24px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.logo svg {
+    color: var(--accent);
+}
+
+/* ── Section shared ────────────────────────────────────── */
+section {
+    margin-bottom: 40px;
+}
+
+section h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.subtitle {
+    font-size: .875rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+/* ── Drop zone ─────────────────────────────────────────── */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 48px 24px;
+    text-align: center;
+    transition: border-color .2s, background .2s;
+    cursor: pointer;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--accent);
+    background: #eef1fe;
+}
+
+.drop-icon {
+    margin-bottom: 14px;
+    color: var(--muted);
+}
+
+.drop-zone.drag-over .drop-icon {
+    color: var(--accent);
+}
+
+.drop-label {
+    font-size: .95rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.drop-or {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+}
+
+.btn-browse {
+    display: inline-block;
+    padding: 8px 22px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .18s;
+}
+
+.btn-browse {
+    background: var(--accent-h);
+}
+
+/* ── Staged file list ──────────────────────────────────── */
+.file-list {
+    list-style: none;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.file-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .875rem;
+}
+
+.file-list li .file-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+}
+
+.file-list li .file-size {
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.file-list li .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color .15s;
+}
+
+.file-list li .remove-btn {
+    color: var(--danger);
+}
+
+/* ── Upload button ─────────────────────────────────────── */
+.btn-upload {
+    margin-top: 20px;
+    display: block;
+    width: 100%;
+    padding: 12px;
+    border-radius: var(--radius);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s, opacity .18s;
+}
+
+.btn-upload:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.btn-upload:not(:disabled):hover {
+    background: var(--accent-h);
+}
+
+.btn-upload.loading {
+    opacity: .7;
+    cursor: wait;
+}
+
+/* ── Result cards ──────────────────────────────────────── */
+.result-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.result-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+}
+
+.result-card .badge {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.result-card.success .badge {
+    background: #dcfce7;
+}
+
+.result-card.failure .badge {
+    background: #fee2e2;
+}
+
+.result-card .card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-card .card-filename {
+    font-weight: 600;
+    font-size: .9rem;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.result-card .card-detail {
+    font-size: .8rem;
+    color: var(--muted);
+}
+
+.result-card.failure .card-detail {
+    color: var(--danger);
+}
+
+.result-card .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 6px;
+}
+
+.result-card .meta-item {
+    font-size: .8rem;
+    color: var(--muted);
+}
+
+.result-card .meta-item span {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* ── Invoices table ────────────────────────────────────── */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: .8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.btn-refresh {
+    background: var(--bg);
+}
+
+.table-wrapper {
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+}
+
+thead tr {
+    background: #f8f9fc;
+}
+
+th,
+td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: .85rem;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: .75rem;
+    letter-spacing: .04em;
+}
+
+tbody tr td {
+    border-bottom: none;
+}
+
+tbody tr td {
+    background: #fafbff;
+}
+
+.empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 32px 0;
+}
+
+/* ── Spinner ────────────────────────────────────────────── */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, .4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+/* ── Chat ───────────────────────────────────────────────── */
+.chat-section {
+    margin-bottom: 40px;
+}
+
+.chat-container {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 20px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chat-bubble {
+    max-width: 80%;
+    padding: 10px 16px;
+    border-radius: 16px;
+    font-size: .9rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.chat-bubble.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.agent {
+    align-self: flex-start;
+    background: #f0f1f5;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+}
+
+.chat-bubble.agent.thinking {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.chat-input-row {
+    display: flex;
+    border-top: 1px solid var(--border);
+}
+
+.chat-input-row input {
+    flex: 1;
+    padding: 14px 16px;
+    border: none;
+    outline: none;
+    font-size: .9rem;
+    background: transparent;
+}
+
+.btn-send {
+    padding: 0 18px;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    transition: color .15s;
+    display: flex;
+    align-items: center;
+}
+
+.btn-send {
+    color: var(--accent-h);
+}
+
+.btn-send {
+    color: var(--muted);
+    cursor: not-allowed;
+}

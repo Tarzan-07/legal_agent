@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title> Invoice Agent </title>
+        <link rel="stylesheet" href="/static/style.css?v=2" />
+    </head>
+
+    <body>
+        <div class="app">
+            <header>
+                <div class="logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span> Invoice Agent </span>
+                </div>
+            </header>
+
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <h2>Upload Invoices</h2>
+                <p class="subtitle">PDF, JPG, PNG, or TIFF - single or multiple files</p>
+
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                            <polyline points="16 16 12 12 8 16"/>
+                            <line x1="12" y1="12" x2="12" y2="21"/>
+                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                        </svg>
+                    </div>
+                    <p class="drop-label"> Drag &amp; drop files here</p>
+                    <p class="drop-or">or</p>
+                    <label class="btn-browse" for="fileInput">Browse Files</label>
+                    <input type="file" id="fileInput" multiple
+                        accept=".pdf, .jpg, .png, .jpeg, .tiff" hidden />
+                </div>
+
+                <!-- Staged Files List -->
+                <ul class="file-list" id="fileList"></ul>
+                <button class="btn-upload" id="uploadBtn" disabled>
+                    Upload &amp; Process
+                </button>
+            </section>
+
+            <!-- Results Section -->
+            <section class="result-section" id="resultSection" hidden>
+                <h2>Processing Files</h2>
+                <div class="result-cards" id="resultCards"></div>
+            </section>
+
+            <!-- Result Table -->
+            <section class="result-table">
+                <div class="section-header">
+                    <h2>
+                        Stored Invoices
+                    </h2>
+                    <button class="btn-refresh" id="refreshBtn" title="Refresh">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="invoicesTables">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Vendor</th>
+                                <th>Invoice</th>
+                                <th>Date</th>
+                                <th>Due date</th>
+                                <th>total</th>
+                                <th>Currency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoicesBody">
+                            <tr>
+                                <td colspan="7" class="empty">
+                                    No invoices yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Chat With Agent -->
+            <section class="chat-section">
+                <h2>Chat with invoice Agent</h2>
+                <p class="subtitle"> Ask anything about your invoices - spending, vendors, dates, details</p>
+                <div class="chat-container" id="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-bubble agent">
+                            Hi! I can help you query your invoices. Try asking something like
+                            "What's my total spending?" or "Show invoices from a specific company".
+                        </div>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chatInput" placeholder="Ask about your invoices..."/>
+                        <button class="btn-send" id="sendBtn" title="Send">
+                            <svg xlmns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <script src="/static/app.js?v=2"></script>
+    </body>
+</html>
