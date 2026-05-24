@@ -14,6 +14,8 @@ import logging
 import pika
 import json
 import uuid
+import magic
+import mimetypes
 
 from pathlib import Path
 
@@ -91,10 +93,16 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
         ALLOWED_TEXT_EXT = {".pdf", ".doc", ".docx"}
         ALLOWED_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp", ".tiff"}
 
-        unique_id = str(uuid.uuid4())
-
         for file in files:
-            file_ext = Path(file.filename).suffix.lower()
+            file_content = await file.read(2048)
+            await file.seek(0)
+            mime_type = magic.from_buffer(file_content, mime=True)
+            file_ext = mimetypes.guess_extension(mime_type)
+
+            if file_ext == '.jpe':
+                file_ext = '.jpg'
+
+            unique_id = str(uuid.uuid4())
             
             if file_ext in ALLOWED_TEXT_EXT: 
                 file_path = f"text/{unique_id}_{file.filename}"
@@ -109,8 +117,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
                     "error": f"Extension '{file_ext}' not supported."
                 })
                 continue
-    
-            file_content = await file.read()
+            
             response = supabase.storage.from_(BUCKET_NAME).upload(
                 path=file_path,
                 file=file_content,
@@ -127,18 +134,14 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             
             publish_to_queue(task_payload)
             logger.info(f"Queued message task for file: {file.filename}")
-
+            
             results.append({
                 "status": "queued",
                 "filename": file.filename,
                 "public_url": public_url
             })
-
+        
         return {"results": results}
-
-        # logger.info(f"Successfully stored the file in supabase !")
-        # return {'results': results}
-
 
 
     except Exception as e:
