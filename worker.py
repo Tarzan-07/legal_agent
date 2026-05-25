@@ -11,6 +11,7 @@ import json
 from supabase import Client, create_client
 
 from doc_tools import process_document
+from img_tools import process_images
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,7 +51,8 @@ def callback(ch, method, properties, body):
         if file_ext in ALLOWED_TEXT_EXT:
             process_document(temp_local_path)
         elif file_ext in ALLOWED_IMG_EXT:
-            logger.error(f"Image extensions still nor supported.")
+            # logger.error(f"Image extensions still nor supported.")
+            process_images(temp_local_path)
         ch.basic_ack(delivery_tag=method.delivery_tag)
         logger.info(f"Task completed successfully and acknowledged: {original_filename}")
     

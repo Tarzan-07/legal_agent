@@ -8,6 +8,7 @@ import litellm
 import logging
 
 from dotenv import load_dotenv
+from typing import List, Optional
 from neo4j import GraphDatabase
 from legal_prompts import LEGAL_EXTRACTION_PROMPT
 
@@ -26,12 +27,21 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-embed_model = os.getenv("EMBED_MODEL")
-vis_model = os.getenv("VIS_MODEL")
+PERSIST_DIR = "./vector_db"
+NER_MODEL = os.getenv("NER_MODEL")
+EMBED_MODEL = os.getenv("EMBED_MODEL")
+VIS_MODEL = os.getenv("VIS_MODEL")
 
 NEO4J_URI = os.getenv('NEO4J_URI')
 NEO4J_USER = os.getenv('NEO4J_USER')
 NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
+
+
+embed_model = OpenAIEmbeddings(
+    model=f"openrouter/{EMBED_MODEL}",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
 neo4j_driver = GraphDatabase.driver(uri=NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
@@ -39,38 +49,77 @@ def _encode_images(file_path: str):
     with open(file_path, 'rb') as f:
         return base64.b64encode(f.read()).decode('utf-8')
 
-def extract_text_from_imgs(image_path: str):
-    b64_img = _encode_images(image_path)
-    message = HumanMessage(
-        content=[
-            {'type': 'text', 'text': 'Extract all text from this image. Preserve layout, headings, and tables using markdown format. '},
-            {'type': 'image_url', 'image_url': {'url': f"data:image/jpeg;base64, {b64_img}"}}
-        ]
+def create_chunks(pages: List[dict]):
+    """
+    Split extracted text into semantic chunks.
+    """
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50
     )
 
+    chunks = []; chunk_counter = 0
+    for page in pages:
+        split_chunks = splitter.split_text(page['text'])
+        for chunk in split_chunks:
+            chunks.append(
+                {
+                    "chunk_id": f"chunk_{chunk_counter}",
+                    "page": page['page'],
+                    "text": chunk
+                }
+            )
+
+            chunk_counter += 1
+    logger.info(f"Created {len(chunks)} chunks")
+    return chunks
+
+def vectorize_and_store(chunks: List[dict], file_name):
+    """Vectorizes the input text and stores in vector DB"""
+    texts = [c['text'] for c in chunks]
+    metadatas = []
+    # metadatas = [{'source': file_name, 'chunk_idx': i} for i in range(len(chunks))]
+    for c in chunks:
+        metadatas.append(
+            {
+                'source': file_name,
+                'chunk_id': c['chunk_id'],
+                'page': c['page']
+            }
+        )
+    logger.info("Generating embeddings and storing in chroma...")
+    vector_db = Chroma.from_texts(
+        texts=texts,
+        embedding=embed_model,
+        metadatas=metadatas,
+        persist_directory=PERSIST_DIR
+    )
+
+    return vector_db
+
+# logger.info("Generating embeddings and storing in chroma...")
+
+def extract_text_from_imgs(image_path: str):
+    b64_img = _encode_images(image_path)
+    prompt = (
+        "Extract all text from this image. Preserve layout, headings, and tables "
+        "using markdown format. Return only the text.\n\n"
+        f"Image data: data:image/jpeg;base64,{b64_img}"
+    )
+
+    message = {
+        'role': 'user',
+        'content': prompt
+    }
+
     response = litellm.completion(
-        model=vis_model,
-        messages=message,
+        model=f"openrouter/{VIS_MODEL}",
+        messages=[message],
     )
 
     extracted_text = response.choices[0].message.content
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
-    )
-    chunks = text_splitter.split_text(extracted_text)
-
-    embeddings = OpenAIEmbeddings(
-        model=f"openrouter/{embed_model}",
-        api_key=f"{os.getenv('OPENROUTER_API_KEY')}",
-        base_url="https://openrouter.ai/api/v1",
-    )
-
-    vector_db = Chroma.from_texts(
-        texts=chunks,
-        embedding=embeddings,
-        persist_directory='./openrouter_vector_db'
-    )
+    return [{"page": 1, "text": extracted_text}]
 
 def extract_entities_and_relationships(chunk: dict):
     """
@@ -79,7 +128,7 @@ def extract_entities_and_relationships(chunk: dict):
 
     logger.info(f"Extracting entities from {chunk['chunk_id']}")
     response = litellm.completion(
-        model=NER_MODEL,
+        model=f"openrouter/{NER_MODEL}",
         api_key=os.getenv("OPENROUTER_API_KEY"),
         api_base="https://openrouter.ai/api/v1",
         temperature=0,
@@ -227,7 +276,8 @@ def store_graph_data(tx, file_name, chunk, extraction):
             target_name=normalize_entity_name(target_ent.text),
             target_type=target_ent.type.upper()
         )
-def process_document(file_path: str):
+
+def process_images(file_path: str):
 
     file_name = os.path.basename(file_path)
 
@@ -237,7 +287,7 @@ def process_document(file_path: str):
     # EXTRACT TEXT
     # ---------------------------------------------
 
-    pages = extract_text_from_digital_docs(file_path)
+    pages = extract_text_from_imgs(file_path)
 
     if not pages:
         logger.warning("No text extracted.")
