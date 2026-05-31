@@ -151,7 +151,9 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             results.append({
                 "status": "queued",
                 "filename": file.filename,
-                # "public_url": public_url
+                "file": file.filename,
+                "name": file.filename,
+                "original_filename": file.filename
             })
         
         return {"results": results}

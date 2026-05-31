@@ -8,10 +8,14 @@ import pika
 import logging
 import tempfile
 import json
+from dotenv import load_dotenv
+
 from supabase import Client, create_client
 
 from doc_tools import process_document
 from img_tools import process_images
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,7 +44,8 @@ def callback(ch, method, properties, body):
     logger.info(f"Received task to process: {original_filename}")
 
     try:
-        file_bytes = supabase.storage.from_(BUCKET_NAME).download(file_path)
+        result = supabase.storage.from_(BUCKET_NAME).download(file_path)
+        file_bytes = result[0] if isinstance(result, tuple) else result
 
         file_suffix = os.path.splitext(original_filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as temp_file:
@@ -58,7 +63,11 @@ def callback(ch, method, properties, body):
     
     except Exception as e:
         logger.error(f"Error processing {original_filename}: {str(e)}. Requeuing...")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        if ch.is_open:
+            try:
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            except Exception:
+                logger.exception("Failed to nack message after processing error")
     finally:
         if temp_local_path and os.path.exists(temp_local_path):
             os.remove(temp_local_path)
@@ -95,7 +104,11 @@ def start_worker():
         channel.stop_consuming()
 
     finally:
-        connection.close()
+        try:
+            if connection and connection.is_open:
+                connection.close()
+        except Exception:
+            logger.exception("Error closing RabbitMQ connection")
 
 if __name__=='__main__':
     start_worker()
