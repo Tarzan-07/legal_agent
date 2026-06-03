@@ -18,7 +18,7 @@ Document -> Chunk -> Extract -> Vectorize -> Graph
 import os
 import magic
 import fitz
-import spacy
+# import spacy
 import logging
 import litellm
 

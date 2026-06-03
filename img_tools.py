@@ -32,7 +32,7 @@ NEO4J_USER = os.getenv('NEO4J_USER')
 NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD')
 
 embed_model = OpenAIEmbeddings(
-    model=f"openrouter/{EMBED_MODEL}",
+    model=EMBED_MODEL,
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
 )
@@ -71,22 +71,35 @@ def create_chunks(pages: List[dict]):
     return chunks
 
 def vectorize_and_store(chunks: List[dict], file_name):
-    texts = [c["text"] for c in chunks]
+    texts = []
     metadatas = []
-    for c in chunks:
-        metadatas.append({
-            "source": file_name,
-            "chunk_id": c["chunk_id"],
-            "page": c["page"]
-        })
+    vector_db = None
+    try:
+        logger.info(f"Parsing metadata from chunks......")
+        texts = [c["text"] for c in chunks]
+        logger.info(f"Received the following texts: {texts}")
+        metadatas = []
+        for c in chunks:
+            metadatas.append({
+                "source": file_name,
+                "chunk_id": c["chunk_id"],
+                "page": c["page"]
+            })
+    except Exception as e:
+        logger.debug(f"Unable to parse chunks for vectorization. {str(e)}")
 
     logger.info("Generating embeddings and storing in chroma...")
-    vector_db = Chroma.from_texts(
-        texts=texts,
-        embedding=embed_model,
-        metadatas=metadatas,
-        persist_directory=PERSIST_DIR
-    )
+    try:
+        vector_db = Chroma.from_texts(
+            texts=texts,
+            embedding=embed_model,
+            metadatas=metadatas,
+            persist_directory=PERSIST_DIR
+        )
+        logger.info("Vectorized and stored in chroma.")
+    except Exception as e:
+        logger.exception(f"Unable to store in Chroma: {str(e)}")
+        return None
 
     return vector_db
 
@@ -103,6 +116,7 @@ def extract_text_from_imgs(image_path: str):
     response = litellm.completion(
         model=f"openrouter/{VIS_MODEL}",
         messages=[message],
+        max_tokens=2048,
         timeout=60
     )
 
@@ -127,7 +141,9 @@ def process_images(file_path: str):
     if not chunks:
         raise ValueError("No text was extracted from the image.")
 
-    vectorize_and_store(chunks, os.path.basename(file_path))
+    vector_db = vectorize_and_store(chunks, os.path.basename(file_path))
+    if vector_db is None:
+        raise RuntimeError("Vectorization failed: no embeddings produced")
     logger.info(f"Image processing complete: {len(chunks)} chunks for {file_path}")
 
     return {"status": "processed", "file": os.path.basename(file_path), "chunks": len(chunks)}

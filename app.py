@@ -125,6 +125,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
             else:
                 results.append({
                     "status": "failed",
+                    "success": False,
                     "filename": file.filename,
                     "error": f"Extension '{file_ext}' not supported."
                 })
@@ -150,6 +151,7 @@ async def upload_invoices(files: list[UploadFile] = File(...)):
 
             results.append({
                 "status": "queued",
+                "success": True,
                 "filename": file.filename,
                 "file": file.filename,
                 "name": file.filename,
