@@ -9,7 +9,6 @@ from legal_prompts import LEGAL_EXTRACTION_PROMPT
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_core.messages import HumanMessage
 from langchain_openai import OpenAIEmbeddings
 from ent_types import (
     Entity,
@@ -144,23 +143,43 @@ def extract_text_from_imgs(image_path: str) -> List[dict]:
         logger.error("VIS_MODEL not set; cannot call vision LLM")
         return [{"page": 1, "text": ""}]
 
-    # If VIS_MODEL does not include a provider (no '/'), prefer openrouter if key exists
-    if "/" not in llm_model:
+    # Ensure the model string starts with a litellm provider prefix.
+    # Models like "google/gemma-4-31b-it:free" contain a '/' but are NOT a
+    # valid litellm provider — they need "openrouter/" prepended.
+    KNOWN_LITELLM_PROVIDERS = (
+        "openrouter/", "openai/", "anthropic/", "huggingface/",
+        "cohere/", "together_ai/", "ollama/", "azure/", "replicate/",
+        "bedrock/", "vertex_ai/", "groq/", "mistral/",
+    )
+    if not any(llm_model.startswith(p) for p in KNOWN_LITELLM_PROVIDERS):
         if os.getenv("OPENROUTER_API_KEY"):
             llm_model = f"openrouter/{llm_model}"
             logger.info("Normalized VIS model to %s", llm_model)
         else:
-            logger.error("VIS_MODEL '%s' lacks a provider prefix and OPENROUTER_API_KEY not set", VIS_MODEL)
+            logger.error("VIS_MODEL '%s' lacks a litellm provider prefix and OPENROUTER_API_KEY not set", VIS_MODEL)
             return [{"page": 1, "text": ""}]
 
     try:
         b64_img = _encode_images(image_path)
-        prompt = (
-            "You are a vision-capable assistant. Extract and return only the plain text content "
-            "from the following image. Preserve line breaks where meaningful.\n\n"
-            f"Image data: data:image/jpeg;base64,{b64_img}"
-        )
-        message = HumanMessage(content=prompt)
+        # litellm.completion requires OpenAI-style plain dicts, NOT LangChain objects.
+        # Vision models require the image passed as a structured image_url content block.
+        message = {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "You are a vision-capable assistant. Extract and return only the "
+                        "plain text content from the following image. Preserve line breaks "
+                        "where meaningful."
+                    ),
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64_img}"},
+                },
+            ],
+        }
         try:
             response = litellm.completion(
                 model=llm_model,

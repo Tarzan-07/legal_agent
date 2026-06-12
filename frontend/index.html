@@ -3,31 +3,137 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title> Invoice Agent </title>
-        <link rel="stylesheet" href="/static/style.css?v=2" />
+        <title>Invoice Agent</title>
+        <meta name="description" content="AI-powered invoice processing and querying agent. Upload invoices, extract data, and chat with your financial records." />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="/static/style.css?v=3" />
     </head>
 
     <body>
-        <div class="app">
-            <header>
-                <div class="logo">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <!-- ── Sidebar overlay backdrop (covers main content) ── -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- ── Sidebar drawer ── -->
+        <aside class="sidebar" id="sidebar" aria-hidden="true">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Menu</span>
+                <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Sidebar tabs -->
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="sessions" id="tabSessions">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Chat Sessions
+                </button>
+                <button class="sidebar-tab" data-tab="invoices" id="tabInvoices">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14 2 14 8 20 8"/>
                         <line x1="16" y1="13" x2="8" y2="13"/>
                         <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10 9 9 9 8 9"/>
                     </svg>
-                    <span> Invoice Agent </span>
+                    Invoices
+                </button>
+            </div>
+
+            <!-- Chat Sessions panel -->
+            <div class="sidebar-panel" id="panelSessions">
+                <div class="session-panel-header">
+                    <button class="btn-new-session" id="newSessionBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        New Session
+                    </button>
+                </div>
+                <div class="session-list" id="sessionList">
+                    <p class="session-empty">No sessions yet.</p>
+                </div>
+            </div>
+
+            <!-- Stored Invoices panel -->
+            <div class="sidebar-panel" id="panelInvoices" hidden>
+                <div class="invoices-panel-header">
+                    <button class="btn-refresh" id="refreshBtn" title="Refresh">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="invoices-panel-body">
+                    <table id="invoicesTables" class="sidebar-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Vendor</th>
+                                <th>Invoice</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoicesBody">
+                            <tr><td colspan="5" class="empty">No invoices yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Main app ── -->
+        <div class="app" id="mainApp">
+            <header>
+                <div class="header-left">
+                    <!-- Hamburger (top-left) -->
+                    <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+
+                    <div class="logo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        <span>Invoice Agent</span>
+                    </div>
+                </div>
+
+                <!-- Active session badge -->
+                <div class="session-badge" id="sessionBadge" title="Active session">
+                    <span class="session-dot"></span>
+                    <span class="session-badge-label" id="sessionBadgeLabel">No session</span>
                 </div>
             </header>
 
             <!-- Upload Section -->
             <section class="upload-section">
                 <h2>Upload Invoices</h2>
-                <p class="subtitle">PDF, JPG, PNG, or TIFF - single or multiple files</p>
+                <p class="subtitle">PDF, JPG, PNG, or TIFF — single or multiple files</p>
 
                 <div class="drop-zone" id="dropZone">
                     <div class="drop-icon">
@@ -39,7 +145,7 @@
                             <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                         </svg>
                     </div>
-                    <p class="drop-label"> Drag &amp; drop files here</p>
+                    <p class="drop-label">Drag &amp; drop files here</p>
                     <p class="drop-or">or</p>
                     <label class="btn-browse" for="fileInput">Browse Files</label>
                     <input type="file" id="fileInput" multiple
@@ -59,50 +165,11 @@
                 <div class="result-cards" id="resultCards"></div>
             </section>
 
-            <!-- Result Table -->
-            <section class="result-table">
-                <div class="section-header">
-                    <h2>
-                        Stored Invoices
-                    </h2>
-                    <button class="btn-refresh" id="refreshBtn" title="Refresh">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                            <polyline points="23 4 23 10 17 10"/>
-                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                        </svg>
-                        Refresh
-                    </button>
-                </div>
-                <div class="table-wrapper">
-                    <table id="invoicesTables">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Vendor</th>
-                                <th>Invoice</th>
-                                <th>Date</th>
-                                <th>Due date</th>
-                                <th>total</th>
-                                <th>Currency</th>
-                            </tr>
-                        </thead>
-                        <tbody id="invoicesBody">
-                            <tr>
-                                <td colspan="7" class="empty">
-                                    No invoices yet.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
 
             <!-- Chat With Agent -->
             <section class="chat-section">
-                <h2>Chat with invoice Agent</h2>
-                <p class="subtitle"> Ask anything about your invoices - spending, vendors, dates, details</p>
+                <h2>Chat with Invoice Agent</h2>
+                <p class="subtitle">Ask anything about your invoices — spending, vendors, dates, details</p>
                 <div class="chat-container" id="chat-container">
                     <div class="chat-messages" id="chatMessages">
                         <div class="chat-bubble agent">
@@ -113,7 +180,7 @@
                     <div class="chat-input-row">
                         <input type="text" id="chatInput" placeholder="Ask about your invoices..."/>
                         <button class="btn-send" id="sendBtn" title="Send">
-                            <svg xlmns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="22" y1="2" x2="11" y2="13"/>
                                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -124,6 +191,6 @@
             </section>
         </div>
 
-        <script src="/static/app.js?v=2"></script>
+        <script src="/static/app.js?v=3"></script>
     </body>
 </html>
